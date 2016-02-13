@@ -1,4 +1,4 @@
-import diewald_CV_kit.blobdetection.*; //<>// //<>// //<>//
+import diewald_CV_kit.blobdetection.*; //<>// //<>// //<>// //<>//
 import diewald_CV_kit.libraryinfo.*;
 import diewald_CV_kit.utility.*;
 
@@ -71,12 +71,11 @@ TouchPoint[] touchPoints;
 
 static int globalTouchPointIndex;
 
-  int minDiff, minDiffTouch = 8, maxDiff, minBlobWeight, maxBlobWeight,
-      minHandWeight = 500, maxHandWeight = 5000;
+int minDiff, minDiffTouch = 8, maxDiff, minBlobWeight, maxBlobWeight;
 
- 
-  PImage blobsImageTouch;
-  PImage blobsImageBlank;
+
+PImage blobsImageTouch;
+PImage blobsImageBlank;
 
 color[] colors = {
   color(255, 0, 0), color(0, 255, 0), color(20, 100, 255), color(255, 255, 50), color(255, 0, 255), color(0, 255, 255)
@@ -95,6 +94,7 @@ void setup()
   println("setup");
   criticalStop = false;
   textMode(MODEL);
+ 
 
   config = loadXML("config.xml");
 
@@ -195,11 +195,17 @@ void setup()
   pixelsLength = imageWidth * imageHeight;
 
   planeMask = createGraphics(imageWidth, imageHeight, P2D);
+  
+    blobsImage = createImage(imageWidth, imageHeight, ARGB);
+  blobsImageTouch = createImage(imageWidth, imageHeight, ARGB);
+  blobsImageBlank = createImage(imageWidth, imageHeight, ARGB);
+ 
 
   XML xmlDetection = config.getChild("detection");
 
   minDistance = xmlDetection.getInt("minDistance");
   maxDistance = xmlDetection.getInt("maxDistance");
+  maxDistance = 100;
   minBlobSize = xmlDetection.getInt("minBlobSize");
   maxBlobSize = xmlDetection.getInt("maxBlobSize");
   nonLinearMode = boolean(xmlDetection.getString("nonLinear"));
@@ -266,633 +272,565 @@ int[] getDepthMap() {
   return depthMap;
 }
 
- void draw() {
-    if (criticalStop)
-      return;
+void draw() {
+  if (criticalStop)
+    return;
 
-    background(0);
-   // context.update();
-    // draw
-    pushMatrix();
-    translate(mainOffset.x, mainOffset.y);
+  background(0);
+  // context.update();
+  // draw
+  pushMatrix();
+  translate(mainOffset.x, mainOffset.y);
 
-    PImage kinectImage = null;
-    int i;
-    int[] depthMap = getDepthMap();
+  PImage kinectImage = null;
+  int i;
+  int[] depthMap = getDepthMap();
 
-    if (autoCalibrate && planePixels == null) {
-      println("AutoCalibrate !");
-      calibratePlane();
-    }
-
-    if (doCalibrate) {
-      calibratePlane();
-    }
-
-    if (!miniMode) {
-      if (enableRGB) {
-        kinectImage = context.getPointCloudDepthImage();
-
-      } else {
-        kinectImage = context.getPointCloudDepthImage();
-      }
-
-      if (doMask && planePixels != null) {
-        kinectImage.mask(planePixels);
-      }
-
-      image(kinectImage, 0, 0);
-    }
-
-    simulationAndTransformation();
-
-    if (planePixelsLength > 0) {
-
-      processBlobAndImage(kinectImage, depthMap);
-    }
-
-    popMatrix(); // mainOffset pop
-
-    if (showFeedback && !miniMode) {
-      feedback.draw();
-
-      for (i = 0; i < touchPoints.length; i++) {
-
-        int c = getColorForIndex(touchPoints[i].id);
-        feedback.drawPoint(touchPoints[i], touchPoints[i].id, c);
-        pushMatrix();
-        translate(mainOffset.x, mainOffset.y);
-        touchPoints[i].drawPointReel(c);
-        popMatrix();
-      }
-    }
-
-    if (!miniMode) {
-      if (showInfos) {
-        drawGUI();
-      }
-      text("'i' - Show / Hide infos", 10, 10, 200, 20);
-    }
-
-    pushStyle();
-    textAlign(RIGHT);
-    noStroke();
-    fill(0, 160);
-    rect(width - 200, height - 40, 100, 40);
-    fill(255);
-    text("Framerate " + (int) frameRate, width - 100, height - 35, 90, 15);
-    // text("Raw blobs "+rawBlobsNumber, width-100, height-35, 90, 15);
-    text("Active blobs " + goodBlobsNumber, width - 100, height - 15, 90,
-        15);
-    popStyle();
-
-    if (calibratePlane) {
-      calibratePlane = false;
-      calibratePlane();
-    }
-//    
-//    ellipse(mouseX,mouseY,400,400);
-//    image(blobsImage,mouseX,mouseY);
-
+  if (autoCalibrate && planePixels == null) {
+    println("AutoCalibrate !");
+    calibratePlane();
   }
+
+  if (doCalibrate) {
+      println("calibration done !");
+    calibratePlane();
+  }
+
+  if (!miniMode) {
+    if (enableRGB) {
+      kinectImage = context.getPointCloudDepthImage();
+    } else {
+      kinectImage = context.getPointCloudDepthImage();
+    }
+
+    if (doMask && planePixels != null) {
+      kinectImage.mask(planePixels);
+    }
+
+    image(kinectImage, 0, 0);
+  }
+
+  simulationAndTransformation();
+
+  if (planePixelsLength > 0) {
+
+    processBlobAndImage(kinectImage, depthMap);
+  }
+
+  popMatrix(); // mainOffset pop
+
+  if (showFeedback && !miniMode) {
+    feedback.draw();
+
+    for (i = 0; i < touchPoints.length; i++) {
+
+      int c = getColorForIndex(touchPoints[i].id);
+      feedback.drawPoint(touchPoints[i], touchPoints[i].id, c);
+      pushMatrix();
+      translate(mainOffset.x, mainOffset.y);
+      touchPoints[i].drawPointReel(c);
+      popMatrix();
+    }
+  }
+
+  if (!miniMode) {
+    if (showInfos) {
+      drawGUI();
+    }
+    text("'i' - Show / Hide infos", 10, 10, 200, 20);
+  }
+
+  pushStyle();
+  textAlign(RIGHT);
+  noStroke();
+  fill(0, 160);
+  rect(width - 200, height - 40, 100, 40);
+  fill(255);
+  text("Framerate " + (int) frameRate, width - 100, height - 35, 90, 15);
+  // text("Raw blobs "+rawBlobsNumber, width-100, height-35, 90, 15);
+  text("Active blobs " + goodBlobsNumber, width - 100, height - 15, 90, 
+    15);
+  popStyle();
+
+  if (calibratePlane) {
+    calibratePlane = false;
+    calibratePlane();
+  }
+  //    
+  //    ellipse(mouseX,mouseY,400,400);
+  //    image(blobsImage,mouseX,mouseY);
+}
 
 private void drawGUI() {
-    fill(0, 160);
-    noStroke();
-    rect(0, 0, 300, 310);
+  fill(0, 160);
+  noStroke();
+  rect(0, 0, 300, 310);
 
+  fill(255);
+  pushStyle();
+  if (showGrid)
+    fill(100, 200, 20);
+  text("g : Show / Hide Grid", 10, 30, 200, 20);
+  popStyle();
+
+  text("8 / 2 : Increase / Decrease grid densityr", 10, 50, 250, 20);
+
+  pushStyle();
+  if (showDrawingLines)
+    fill(100, 200, 20);
+  text("d : Show / Hide Drawing Lines", 10, 70, 200, 20);
+  popStyle();
+
+  pushStyle();
+  if (showHelpers)
+    fill(100, 200, 20);
+  text("h : Show / Hide Helpers", 10, 90, 200, 20);
+  popStyle();
+
+  pushStyle();
+  if (enableRGB)
+    fill(100, 200, 20);
+  text("k : Switch RGB / Depth Image mode", 10, 110, 200, 20);
+  popStyle();
+
+  pushStyle();
+  if (mirrorMode)
+    fill(100, 200, 20);
+  text("r : Toggle Kinect Mirror Mode", 10, 130, 200, 20);
+  popStyle();
+
+  pushStyle();
+  if (showLabels)
+    fill(100, 200, 20);
+  text("l : Show / Hide Labels", 10, 150, 200, 20);
+  popStyle();
+
+  pushStyle();
+  if (showFeedback)
+    fill(100, 200, 20);
+  text("f : Show / Hide Feedback", 10, 170, 200, 20);
+  popStyle();
+
+  text("c : Calibrate plane", 10, 190, 200, 20);
+
+  pushStyle();
+  if (doMask)
+    fill(100, 200, 20);
+  text("m : Toggle plane mask mode", 10, 210, 250, 20);
+  popStyle();
+
+  pushStyle();
+  if (swapXY)
+    fill(100, 200, 20);
+  text("w : Toggle swapXY", 10, 230, 250, 20);
+  popStyle();
+
+  pushStyle();
+  if (invertX)
+    fill(100, 200, 20);
+  text("x : Toggle invertX", 10, 250, 250, 20);
+  popStyle();
+
+  pushStyle();
+  if (invertY)
+    fill(100, 200, 20);
+  text("y : Toggle invertY", 10, 270, 250, 20);
+  popStyle();
+
+  text("s : Save settings", 10, 290, 250, 20);
+
+  pushStyle();
+  fill(0, 160);
+  rect(0, height - 40, width, 40);
+
+  if (!miniMode) {
     fill(255);
-    pushStyle();
-    if (showGrid)
-      fill(100, 200, 20);
-    text("g : Show / Hide Grid", 10, 30, 200, 20);
-    popStyle();
+    text("Min / Max diff touch ((u-U) & '+' / '-') : " + minDiffTouch, 
+      10, height - 75, 500, 20);
 
-    text("8 / 2 : Increase / Decrease grid densityr", 10, 50, 250, 20);
-
-    pushStyle();
-    if (showDrawingLines)
-      fill(100, 200, 20);
-    text("d : Show / Hide Drawing Lines", 10, 70, 200, 20);
-    popStyle();
-
-    pushStyle();
-    if (showHelpers)
-      fill(100, 200, 20);
-    text("h : Show / Hide Helpers", 10, 90, 200, 20);
-    popStyle();
-
-    pushStyle();
-    if (enableRGB)
-      fill(100, 200, 20);
-    text("k : Switch RGB / Depth Image mode", 10, 110, 200, 20);
-    popStyle();
-
-    pushStyle();
-    if (mirrorMode)
-      fill(100, 200, 20);
-    text("r : Toggle Kinect Mirror Mode", 10, 130, 200, 20);
-    popStyle();
-
-    pushStyle();
-    if (showLabels)
-      fill(100, 200, 20);
-    text("l : Show / Hide Labels", 10, 150, 200, 20);
-    popStyle();
-
-    pushStyle();
-    if (showFeedback)
-      fill(100, 200, 20);
-    text("f : Show / Hide Feedback", 10, 170, 200, 20);
-    popStyle();
-
-    text("c : Calibrate plane", 10, 190, 200, 20);
-
-    pushStyle();
-    if (doMask)
-      fill(100, 200, 20);
-    text("m : Toggle plane mask mode", 10, 210, 250, 20);
-    popStyle();
-
-    pushStyle();
-    if (swapXY)
-      fill(100, 200, 20);
-    text("w : Toggle swapXY", 10, 230, 250, 20);
-    popStyle();
-
-    pushStyle();
-    if (invertX)
-      fill(100, 200, 20);
-    text("x : Toggle invertX", 10, 250, 250, 20);
-    popStyle();
-
-    pushStyle();
-    if (invertY)
-      fill(100, 200, 20);
-    text("y : Toggle invertY", 10, 270, 250, 20);
-    popStyle();
-
-    text("s : Save settings", 10, 290, 250, 20);
-
-    pushStyle();
-    fill(0, 160);
-    rect(0, height - 40, width, 40);
-
-    if (!miniMode) {
-      fill(255);
-      text("Min / Max diff touch ((u-U) & '+' / '-') : " + minDiffTouch,
-          10, height - 75, 500, 20);
-
-      text("Min / Max hand size ((Ctrl+alt or Shift+Ctrl) & '+' / '-') : "
-          + minHandWeight + " -> " + maxHandWeight, 10, height - 55,
-          500, 20);
-      text("Min / Max diff ((Ctrl or Shift) & '+' / '-') : " + minDiff
-          + " -> " + maxDiff, 10, height - 35, 400, 20);
-      text("Min / Max blob size ((Alt or Nothing) & '+' / '-') : "
-          + minBlobWeight + " -> " + maxBlobWeight, 10, height - 15,
-          450, 20);
-    }
-    popStyle();
+  minDiff = 2;
+  maxDiff = 100;
+  minBlobWeight = 35;
+  maxBlobWeight = 1210;
+  
+    text("Min / Max diff ((Ctrl or Shift) & '+' / '-') : " + minDiff
+      + " -> " + maxDiff, 10, height - 35, 400, 20);
+    text("Min / Max blob size ((Alt or Nothing) & '+' / '-') : "
+      + minBlobWeight + " -> " + maxBlobWeight, 10, height - 15, 
+      450, 20);
   }
+  popStyle();
+}
 
 private void processBlobAndImage(PImage kinectImage, int[] depthMap) {
-    int i;
+  int i;
 
-    blobsImage.set(0, 0, blobsImageBlank);
-    blobsImageTouch.set(0, 0, blobsImageBlank);
+  blobsImage.set(0, 0, blobsImageBlank);
+  blobsImageTouch.set(0, 0, blobsImageBlank);
 
-    blobsImage.loadPixels();
-    blobsImageTouch.loadPixels();
+  blobsImage.loadPixels();
+  blobsImageTouch.loadPixels();
 
-    int[] floorMaskPixels = new int[pixelsLength];
+  int[] floorMaskPixels = new int[pixelsLength];
 
-    PVector topLeft = new PVector(imageWidth, imageHeight);
-    PVector bottomRight = new PVector(0, 0);
+  PVector topLeft = new PVector(imageWidth, imageHeight);
+  PVector bottomRight = new PVector(0, 0);
 
-    for (i = 0; i < planePixelsLength; i++) {
-      int targetPixelIndex = planeDepthPixels[i];
-      int refDepth = (int) red(planeDepthMap[i]);
-      int curDepth = (int) red(depthMap[targetPixelIndex]);
-      // filterImage.pixels[targetPixelIndex] = color(255,0,0,50);
-      int diffDepth = refDepth - curDepth;
+  for (i = 0; i < planePixelsLength; i++) {
+    int targetPixelIndex = planeDepthPixels[i];
+    int refDepth = (int) red(planeDepthMap[i]);
+    int curDepth = (int) red(depthMap[targetPixelIndex]);
+    // filterImage.pixels[targetPixelIndex] = color(255,0,0,50);
+    int diffDepth = refDepth - curDepth;
 
-      // blobsImage.pixels[targetPixelIndex] = color(0,225,120,150);
+    // blobsImage.pixels[targetPixelIndex] = color(0,225,120,150);
 
-      if (diffDepth > minDiffTouch) { 
-        // ESTAMOS POR ENCIMA DEL �REA DE CONTACTO
+    if (diffDepth > minDiffTouch) { 
+      // ESTAMOS POR ENCIMA DEL �REA DE CONTACTO
 
-        if (diffDepth < minDiff) {
-          // ESTAMOS EN ZONA DE TOUCH
-          blobsImageTouch.pixels[targetPixelIndex] = color(0, 255, 0,
-              150);
-        }
-        // QUiZA ESTAMOS EN ZONA DE BLOB
-        if (maskFloor) {
-          floorMaskPixels[targetPixelIndex] = 255;
-        }
-
-        // blobsImage.pixels[targetPixelIndex] =
-        // color(0,50,255,150);
-
-        if (diffDepth < maxDiff) {
-          // AHORA S� ESTAMOS EN ZONA DE BLOB
-          int reelX = targetPixelIndex % imageWidth;
-          int reelY = floor(targetPixelIndex / imageWidth);
-
-          topLeft.x = min(topLeft.x, reelX);
-          topLeft.y = min(topLeft.y, reelY);
-          bottomRight.x = max(bottomRight.x, reelX);
-          bottomRight.y = max(bottomRight.y, reelY);
-
-          // println(curDepth+"-"+refDepth+" = "+(curDepth-refDepth));
-          blobsImage.pixels[targetPixelIndex] = color(255, 0, 0, 150);
-        }
-
+      if (diffDepth < minDiff) {
+        // ESTAMOS EN ZONA DE TOUCH
+        blobsImageTouch.pixels[targetPixelIndex] = color(0, 255, 0, 
+          150);
       }
-    }
-
-    blobsImage.updatePixels();
-
-    if (topLeft.x < bottomRight.x) {
-
-      topLeft.x -= 10;
-      topLeft.y -= 10;
-      bottomRight.x += 10;
-      bottomRight.y += 10;
-
-      int rectW = (int) (bottomRight.x - topLeft.x);
-      int rectH = (int) (bottomRight.y - topLeft.y);
-
-      if (miniMode) {
-        pushStyle();
-        stroke(40, 120, 230, 100);
-        strokeWeight(2);
-        noFill();
-        rect(topLeft.x, topLeft.y, rectW, rectH);
-        popStyle();
+      // QUiZA ESTAMOS EN ZONA DE BLOB
+      if (maskFloor) {
+        floorMaskPixels[targetPixelIndex] = 255;
       }
 
-      // blobsImage = blobsImage.get((int)topLeft.x, (int)topLeft.y,
-      // rectW, rectH);*/
-      processBlobs(blobsImage, blobsImageTouch, topLeft, rectW, rectH);
+      // blobsImage.pixels[targetPixelIndex] =
+      // color(0,50,255,150);
+        maxDiff = 100;
+      if (diffDepth < maxDiff) {
+        // AHORA S� ESTAMOS EN ZONA DE BLOB
+        int reelX = targetPixelIndex % imageWidth;
+        int reelY = floor(targetPixelIndex / imageWidth);
 
-      if (!miniMode) {
-        if (maskFloor) {
-          kinectImage.mask(floorMaskPixels);
-          image(kinectImage, 0, 0);
-        }
+        topLeft.x = min(topLeft.x, reelX);
+        topLeft.y = min(topLeft.y, reelY);
+        bottomRight.x = max(bottomRight.x, reelX);
+        bottomRight.y = max(bottomRight.y, reelY);
 
-        image(blobsImage, 0, 0);
-        image(blobsImageTouch, 0, 0);
+        // println(curDepth+"-"+refDepth+" = "+(curDepth-refDepth));
+        blobsImage.pixels[targetPixelIndex] = color(255, 0, 0, 150);
       }
-    } else {
-      processBlobs(blobsImage, blobsImageTouch, null, 0, 0);
     }
   }
-  
-  public void processBlobs(PImage img, PImage touchImg, PVector offset,
-      int w, int h) {
 
-    goodBlobsNumber = 0;
-   // goodBlobsNumberConvexityDefect = 0;
-    rawBlobsNumber = 0;
+  blobsImage.updatePixels();
 
-    TouchPoint[] blobPoints;
-    TouchPoint[] blobPointsConvexityDefect;
-    TouchPoint[] blobPointsTouch;
+  if (topLeft.x < bottomRight.x) {
 
-    int i;
+    topLeft.x -= 10;
+    topLeft.y -= 10;
+    bottomRight.x += 10;
+    bottomRight.y += 10;
 
-    if (w == 0 || h == 0) {
-      blobPoints = new TouchPoint[0];
-      blobPointsConvexityDefect = new TouchPoint[0];
-      blobPointsTouch = new TouchPoint[0];
-    } else {
+    int rectW = (int) (bottomRight.x - topLeft.x);
+    int rectH = (int) (bottomRight.y - topLeft.y);
 
-      List<TouchPoint> pointList = new ArrayList<NecTouch.TouchPoint>();
-      List<TouchPoint> pointListTouch = new ArrayList<NecTouch.TouchPoint>();
-      List<TouchPoint> pointListConvexityDefect = new ArrayList<NecTouch.TouchPoint>();
-      /*
+    if (miniMode) {
+      pushStyle();
+      stroke(40, 120, 230, 100);
+      strokeWeight(2);
+      noFill();
+      rect(topLeft.x, topLeft.y, rectW, rectH);
+      popStyle();
+    }
+
+    // blobsImage = blobsImage.get((int)topLeft.x, (int)topLeft.y,
+    // rectW, rectH);*/
+    processBlobs(blobsImage, blobsImageTouch, topLeft, rectW, rectH);
+
+    if (!miniMode) {
+      if (maskFloor) {
+        kinectImage.mask(floorMaskPixels);
+        image(kinectImage, 0, 0);
+      }
+
+      image(blobsImage, 0, 0);
+      image(blobsImageTouch, 0, 0);
+    }
+  } else {
+    processBlobs(blobsImage, blobsImageTouch, null, 0, 0);
+  }
+}
+
+public void processBlobs(PImage img, PImage touchImg, PVector offset, 
+  int w, int h) {
+
+  goodBlobsNumber = 0;
+  // goodBlobsNumberConvexityDefect = 0;
+  rawBlobsNumber = 0;
+
+  TouchPoint[] blobPoints;
+  TouchPoint[] blobPointsConvexityDefect;
+  TouchPoint[] blobPointsTouch;
+
+  int i;
+
+  if (w == 0 || h == 0) {
+    blobPoints = new TouchPoint[0];
+    blobPointsConvexityDefect = new TouchPoint[0];
+    blobPointsTouch = new TouchPoint[0];
+  } else {
+
+    List<TouchPoint> pointList = new ArrayList<NecTouch.TouchPoint>();
+    List<TouchPoint> pointListTouch = new ArrayList<NecTouch.TouchPoint>();
+    List<TouchPoint> pointListConvexityDefect = new ArrayList<NecTouch.TouchPoint>();
+    /*
        * bd = new Detector(this,0,0, blobsImage.width, blobsImage.height,
-       * 255 ); bd.findBlobs(blobsImage.pixels, blobsImage.width,
-       * blobsImage.height); bd.loadBlobsFeatures();// to call always
-       * before to use a method returning or processing a blob feature
-       * bd.weightBlobs(true);
-       * 
-       * rawBlobsNumber = bd.getBlobsNumber();
-       */
+     * 255 ); bd.findBlobs(blobsImage.pixels, blobsImage.width,
+     * blobsImage.height); bd.loadBlobsFeatures();// to call always
+     * before to use a method returning or processing a blob feature
+     * bd.weightBlobs(true);
+     * 
+     * rawBlobsNumber = bd.getBlobsNumber();
+     */
 
-      // cv.copy(blobsImage);
+    // cv.copy(blobsImage);
 
-      BiBlob[] blobs = new BiBlob[0];// cv.blobs(minBlobWeight, 50000, 20,
-                      // false, 25, false); // blobs
-                      // javacvPro
-      blobs = cv.findBlobs(blobsImage);
+    BiBlob[] blobs = new BiBlob[0];// cv.blobs(minBlobWeight, 50000, 20,
+    // false, 25, false); // blobs
+    // javacvPro
+    blobs = cv.findBlobs(blobsImage);
 
-      // processBlobsAndFingers(pointList, pointListConvexityDefect,
-      // blobs);
+    // processBlobsAndFingers(pointList, pointListConvexityDefect,
+    // blobs);
 
-      // cv.copy(blobsImageTouch);
+    // cv.copy(blobsImageTouch);
 
-      // Blob[] blobsTouch = cv.blobs(minBlobWeight, 50000, 20, false, 25,
-      // false); // blobs
-      // // javacvPro
+    // Blob[] blobsTouch = cv.blobs(minBlobWeight, 50000, 20, false, 25,
+    // false); // blobs
+    // // javacvPro
 
-      //processBlobsTouchs(pointList, blobs);
+    //processBlobsTouchs(pointList, blobs);
 
-      text("" + goodBlobsNumber, 100, 100);
+    text("" + goodBlobsNumber, 100, 100);
 
-      // while (blobPoints.length > goodBlobsNumber)
+    // while (blobPoints.length > goodBlobsNumber)
 
-      blobPoints = new TouchPoint[pointList.size()];
-      blobPoints = pointList.toArray(blobPoints);
+    blobPoints = new TouchPoint[pointList.size()];
+    blobPoints = pointList.toArray(blobPoints);
 
-      // blobPointsTouch = new TouchPoint[pointListTouch.size()];
-      // blobPointsTouch = pointListTouch.toArray(blobPointsTouch);
-      //
-      // blobPointsConvexityDefect = new
-      // TouchPoint[pointListConvexityDefect
-      // .size()];
-      // blobPointsConvexityDefect = pointListConvexityDefect
-      // .toArray(blobPointsConvexityDefect);
-    }
-
-    // en este m�todo linkamos los blobs del anterior frame con el
-    // siguiente
-    // para identificarlos en el tiempo
-
-    // DEBER�A DE TENER UN LSITADO CON LOS BLOBS DE TOUCH
-    // LUEGO LOS LINKO CON LOS DEDOS
-    // TENDR�A UN LISTADO DE TOUCHS DESDE DEDO O NO, Y SIEMPRE ASOCIADO A
-    // UN
-    // BLOB
-    // LUEGO LOS ENV�O
-
-    // linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
+    // blobPointsTouch = new TouchPoint[pointListTouch.size()];
+    // blobPointsTouch = pointListTouch.toArray(blobPointsTouch);
     //
-    // List<TouchPoint> allList = new ArrayList<TouchPoint>();
-    // for (int j = 0; j < blobPoints.length; j++) {
-    // if (blobPoints[j].linked) {
-    // allList.add(blobPoints[j]);
-    // }
-    // }
-    //
-    // for (int j = 0; j < touchPoints.length; j++) {
-    // if (touchPoints[j].linked) {
-    // allList.add(touchPoints[j]);
-    // }
-    // }
-    //
-    // TouchPoint[] all = new TouchPoint[allList.size()];
-    //
-    // touchPoints = allList.toArray(all);
-
-    touchPoints = blobPoints;
-    List<Object> msgList = new ArrayList<Object>();
-    for (int hh = 0; hh < touchPoints.length; hh++) {
-      TouchPoint point = touchPoints[hh];
-      msgList.add("" + point.x);
-      msgList.add("" + point.y);
-    }
-
-    Object[] msg = new Object[msgList.size()];
-    msgList.toArray(msg);
-    //oscP5Client.send("/cursores", msg, myRemoteLocation);
-
-    // linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
-    //
-    // List<TouchPoint> touchPointsNoLinked = linkTouchAndFingers(
-    // blobPointsTouch, blobPointsConvexityDefect);
-    //
-
-    //
-    // TouchPoint[] touchesArray = new
-    // TouchPoint[touchPointsNoLinked.size()];
-    // touchesArray = touchPointsNoLinked.toArray(touchesArray);
-    //
-    // TouchPoint[] touchAndFingers = new TouchPoint[touchesArray.length
-    // + blobPointsConvexityDefect.length];
-    //
-    // System.arraycopy(touchesArray, 0, touchAndFingers, 0,
-    // touchesArray.length);
-    // System.arraycopy(blobPointsConvexityDefect, 0, touchAndFingers,
-    // touchesArray.length, blobPointsConvexityDefect.length);
-    //
-    // linkBlobs(touchAndFingers, touchPointsFromConvexityDefect,
-    // goodBlobsNumberConvexityDefect);
-
-    // touchPoints = blobPoints;
-    // touchPointsFromConvexityDefect = blobPointsConvexityDefect;
-    //
-    // TouchPoint[] all = new TouchPoint[touchPoints.length
-    // + touchPointsFromConvexityDefect.length];
-    //
-    // System.arraycopy(touchPoints, 0, all, 0, touchPoints.length);
-    // System.arraycopy(touchPointsFromConvexityDefect, 0, all,
-    // touchPoints.length, touchPointsFromConvexityDefect.length);
-    //
-    // tuioServer.send("update", blobPoints);
+    // blobPointsConvexityDefect = new
+    // TouchPoint[pointListConvexityDefect
+    // .size()];
+    // blobPointsConvexityDefect = pointListConvexityDefect
+    // .toArray(blobPointsConvexityDefect);
   }
+
+  // en este m�todo linkamos los blobs del anterior frame con el
+  // siguiente
+  // para identificarlos en el tiempo
+
+  // DEBER�A DE TENER UN LSITADO CON LOS BLOBS DE TOUCH
+  // LUEGO LOS LINKO CON LOS DEDOS
+  // TENDR�A UN LISTADO DE TOUCHS DESDE DEDO O NO, Y SIEMPRE ASOCIADO A
+  // UN
+  // BLOB
+  // LUEGO LOS ENV�O
+
+  // linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
+  //
+  // List<TouchPoint> allList = new ArrayList<TouchPoint>();
+  // for (int j = 0; j < blobPoints.length; j++) {
+  // if (blobPoints[j].linked) {
+  // allList.add(blobPoints[j]);
+  // }
+  // }
+  //
+  // for (int j = 0; j < touchPoints.length; j++) {
+  // if (touchPoints[j].linked) {
+  // allList.add(touchPoints[j]);
+  // }
+  // }
+  //
+  // TouchPoint[] all = new TouchPoint[allList.size()];
+  //
+  // touchPoints = allList.toArray(all);
+
+  touchPoints = blobPoints;
+  List<Object> msgList = new ArrayList<Object>();
+  for (int hh = 0; hh < touchPoints.length; hh++) {
+    TouchPoint point = touchPoints[hh];
+    msgList.add("" + point.x);
+    msgList.add("" + point.y);
+  }
+
+  Object[] msg = new Object[msgList.size()];
+  msgList.toArray(msg);
   
-    public TouchPoint buildTouchPointFromBlob(PVector reelCoordVec,
-      PVector tmpVec, BiBlob blob) {
+}
 
-    // List<PVector> vertxList = new ArrayList<PVector>();
-    //
-    PVector[] vertexPvector = new PVector[blob.getPoints().length];
-    for (int j = 0; j < blob.getPoints().length; j += 1) {
-      PVector temp = getProjectedPoint(new PVector(blob.getPoints()[j].x,
-          blob.getPoints()[j].y));
-      vertexPvector[j] = new PVector(temp.x, temp.y);
-    }
-    //
-    // PVector primero = getProjectedPoint(new
-    // PVector(blob.getPoints()[0].x,
-    // blob.getPoints()[0].y));
-    // vertxList.add(new PVector(primero.x, primero.y));
-    //
-    // PVector[] vertex = new PVector[vertxList.size()];
-    // vertex = vertxList.toArray(vertex);
-    //
-    // vertxList.clear();
-    //
-    // Spline2D spline = new Spline2D(vertex);
-    // // sample the curve at a higher resolution
-    // // so that we get extra 8 points between each original pair of
-    // // points
-    // List<Vec2D> vertices = spline.computeVertices(8);
-    // PVector[] vertexPvector = new PVector[vertices.size()];
-    // for (int j = 0; j < vertices.size(); j++) {
-    // // Vec2D vec2d = vertices.get(j);
-    // // vertexPvector[j] = new PVector(vec2d.x, vec2d.y);
-    // // }
+public TouchPoint buildTouchPointFromBlob(PVector reelCoordVec, 
+  PVector tmpVec, BiBlob blob) {
 
-    TouchPoint point = new TouchPoint(tmpVec.x, tmpVec.y, blob.getArea(),
-        reelCoordVec, false, vertexPvector);
-
-    return point;
+  // List<PVector> vertxList = new ArrayList<PVector>();
+  //
+  PVector[] vertexPvector = new PVector[blob.getPoints().length];
+  for (int j = 0; j < blob.getPoints().length; j += 1) {
+    PVector temp = getProjectedPoint(new PVector(blob.getPoints()[j].x, 
+      blob.getPoints()[j].y));
+    vertexPvector[j] = new PVector(temp.x, temp.y);
   }
-  private void processBlobsTouchs(List<TouchPoint> pointList, BiBlob[] blobs) {
-    int i;
-    // rawBlobsNumber = blobs.length;
-    // blobPoints = new TouchPoint[rawBlobsNumber];
-    for (i = 0; i < blobs.length; i++) {
-      // Rectangle r = blobs[i].rectangle;
-
-      BiBlob blob = blobs[i];
-
-      PVector reelCoordVec = new PVector(blob.getCentroid().x,
-          blob.getCentroid().y);
-      PVector tmpVec = getProjectedPoint(reelCoordVec);
-
-      TouchPoint point = buildTouchPointFromBlob(reelCoordVec, tmpVec,
-          blob);
-      point.touch = true;
-      pointList.add(point);
-      goodBlobsNumber++;
-
-      if (!miniMode) {
-        text("x:" + blob.getCentroid().x, blob.getCentroid().x + 10,
-            blob.getCentroid().y);
-        text("y:" + blob.getCentroid().y, blob.getCentroid().x + 10,
-            blob.getCentroid().y + 20);
-      }
-    }
-  }
-
   //
-  // private void processBlobsAndFingers(List<TouchPoint> pointList,
-  // List<TouchPoint> pointListConvexityDefect, MGBlob[] blobs) {
-  // int i;
-  // rawBlobsNumber = blobs.length;
-  // // blobPoints = new TouchPoint[rawBlobsNumber];
-  // for (i = 0; i < rawBlobsNumber; i++) {
-  // // Rectangle r = blobs[i].rectangle;
+  // PVector primero = getProjectedPoint(new
+  // PVector(blob.getPoints()[0].x,
+  // blob.getPoints()[0].y));
+  // vertxList.add(new PVector(primero.x, primero.y));
   //
-  // MGBlob blob = blobs[i];
+  // PVector[] vertex = new PVector[vertxList.size()];
+  // vertex = vertxList.toArray(vertex);
   //
-  // PVector reelCoordVec = new PVector(blob.getCentroid().x,
-  // blob.getCentroid().y);
-  // PVector tmpVec = getProjectedPoint(reelCoordVec);
+  // vertxList.clear();
   //
-  // TouchPoint point = buildTouchPointFromBlob(reelCoordVec, tmpVec,
-  // blob);
-  // pointList.add(point);
-  // goodBlobsNumber++;
-  //
-  // // // VAMOS A POR LO DEDOS
-  // // if (blob.getArea() > minHandWeight && blob.getArea() <
-  // // maxHandWeight) {
-  // // processFingers(pointListConvexityDefect, reelCoordVec, blob,
-  // // point);
+  // Spline2D spline = new Spline2D(vertex);
+  // // sample the curve at a higher resolution
+  // // so that we get extra 8 points between each original pair of
+  // // points
+  // List<Vec2D> vertices = spline.computeVertices(8);
+  // PVector[] vertexPvector = new PVector[vertices.size()];
+  // for (int j = 0; j < vertices.size(); j++) {
+  // // Vec2D vec2d = vertices.get(j);
+  // // vertexPvector[j] = new PVector(vec2d.x, vec2d.y);
   // // }
-  //
-  // if (!miniMode) {
-  // text(blob.getArea(), blob.getCentroid().x + 10,
-  // blob.getCentroid().y);
-  // }
-  // }
-  // }
+
+  TouchPoint point = new TouchPoint(tmpVec.x, tmpVec.y, blob.getArea(), 
+    reelCoordVec, false, vertexPvector);
+
+  return point;
+}
+private void processBlobsTouchs(List<TouchPoint> pointList, BiBlob[] blobs) {
+  int i;
+  // rawBlobsNumber = blobs.length;
+  // blobPoints = new TouchPoint[rawBlobsNumber];
+  for (i = 0; i < blobs.length; i++) {
+    // Rectangle r = blobs[i].rectangle;
+
+    BiBlob blob = blobs[i];
+
+    PVector reelCoordVec = new PVector(blob.getCentroid().x, 
+      blob.getCentroid().y);
+    PVector tmpVec = getProjectedPoint(reelCoordVec);
+
+    TouchPoint point = buildTouchPointFromBlob(reelCoordVec, tmpVec, 
+      blob);
+    point.touch = true;
+    pointList.add(point);
+    goodBlobsNumber++;
+
+    if (!miniMode) {
+      text("x:" + blob.getCentroid().x, blob.getCentroid().x + 10, 
+        blob.getCentroid().y);
+      text("y:" + blob.getCentroid().y, blob.getCentroid().x + 10, 
+        blob.getCentroid().y + 20);
+    }
+  }
+}
+
 
 private void simulationAndTransformation() {
-    int i;
-    leftHorizon = lineIntersection(gbTL.x, gbTL.y, gbBL.x, gbBL.y, gbTR.x,
-        gbTR.y, gbBR.x, gbBR.y);
-    rightHorizon = lineIntersection(gbTL.x, gbTL.y, gbTR.x, gbTR.y, gbBL.x,
-        gbBL.y, gbBR.x, gbBR.y);
+  int i;
+  leftHorizon = lineIntersection(gbTL.x, gbTL.y, gbBL.x, gbBL.y, gbTR.x, 
+    gbTR.y, gbBR.x, gbBR.y);
+  rightHorizon = lineIntersection(gbTL.x, gbTL.y, gbTR.x, gbTR.y, gbBL.x, 
+    gbBL.y, gbBR.x, gbBR.y);
 
-    PVector upPoint = new PVector(gbBL.x, gbBL.y - upFactor);
+  PVector upPoint = new PVector(gbBL.x, gbBL.y - upFactor);
 
-    if (rightHorizon != null && leftHorizon != null) {
+  if (rightHorizon != null && leftHorizon != null) {
 
-      upLPoint = lineIntersection(gbTL.x, gbTL.y, gbTL.x, gbTL.y - 1,
-          leftHorizon.x, leftHorizon.y, upPoint.x, upPoint.y);
-      upRPoint = lineIntersection(gbBR.x, gbBR.y, gbBR.x, gbBR.y - 1,
-          rightHorizon.x, rightHorizon.y, upPoint.x, upPoint.y);
+    upLPoint = lineIntersection(gbTL.x, gbTL.y, gbTL.x, gbTL.y - 1, 
+      leftHorizon.x, leftHorizon.y, upPoint.x, upPoint.y);
+    upRPoint = lineIntersection(gbBR.x, gbBR.y, gbBR.x, gbBR.y - 1, 
+      rightHorizon.x, rightHorizon.y, upPoint.x, upPoint.y);
 
-      if (!miniMode) {
+    if (!miniMode) {
 
-        if (showDrawingLines && !nonLinearMode) {
-          ellipse(leftHorizon.x, leftHorizon.y, 10, 10);
-          ellipse(rightHorizon.x, rightHorizon.y, 10, 10);
+      if (showDrawingLines && !nonLinearMode) {
+        ellipse(leftHorizon.x, leftHorizon.y, 10, 10);
+        ellipse(rightHorizon.x, rightHorizon.y, 10, 10);
 
-          stroke(200, 150);
-          line(leftHorizon.x, leftHorizon.y, gbBL.x, gbBL.y);
-          line(rightHorizon.x, rightHorizon.y, gbTL.x, gbTL.y);
-          line(leftHorizon.x, leftHorizon.y, gbBR.x, gbBR.y);
-          line(rightHorizon.x, rightHorizon.y, gbBR.x, gbBR.y);
+        stroke(200, 150);
+        line(leftHorizon.x, leftHorizon.y, gbBL.x, gbBL.y);
+        line(rightHorizon.x, rightHorizon.y, gbTL.x, gbTL.y);
+        line(leftHorizon.x, leftHorizon.y, gbBR.x, gbBR.y);
+        line(rightHorizon.x, rightHorizon.y, gbBR.x, gbBR.y);
 
-          line(leftHorizon.x, leftHorizon.y, rightHorizon.x,
-              rightHorizon.y);
-          line(leftHorizon.x, leftHorizon.y, rightHorizon.x,
-              rightHorizon.y);
-        }
-
-        if (showHelpers && !nonLinearMode) {
-          drawRepere(leftHorizon, gbBL, gbTL, upPoint, upLPoint);
-          drawRepere(rightHorizon, gbBL, gbBR, upPoint, upRPoint);
-        }
-
-        if (showGrid) {
-          drawGrid(leftHorizon, rightHorizon, gbBL, gbTL, gbTR, gbBR);
-          drawGrid(rightHorizon, leftHorizon, gbBL, gbBR, gbTL, gbTR);
-        }
+        line(leftHorizon.x, leftHorizon.y, rightHorizon.x, 
+          rightHorizon.y);
+        line(leftHorizon.x, leftHorizon.y, rightHorizon.x, 
+          rightHorizon.y);
       }
 
-      if (!miniMode) {
-        for (i = 0; i < 4; i++) {
-          grabbers[i].draw();
-          stroke(255);
-          line(grabbers[i].x, grabbers[i].y, grabbers[(i + 1) % 4].x,
-              grabbers[(i + 1) % 4].y);
-        }
+      if (showHelpers && !nonLinearMode) {
+        drawRepere(leftHorizon, gbBL, gbTL, upPoint, upLPoint);
+        drawRepere(rightHorizon, gbBL, gbBR, upPoint, upRPoint);
       }
 
-      if (simActive) {
+      if (showGrid) {
+        drawGrid(leftHorizon, rightHorizon, gbBL, gbTL, gbTR, gbBR);
+        drawGrid(rightHorizon, leftHorizon, gbBL, gbBR, gbTL, gbTR);
+      }
+    }
 
-        PVector targetPoint = getProjectedPoint(new PVector(mouseX
-            - mainOffset.x, mouseY - mainOffset.y));
+    if (!miniMode) {
+      for (i = 0; i < 4; i++) {
+        grabbers[i].draw();
+        stroke(255);
+        line(grabbers[i].x, grabbers[i].y, grabbers[(i + 1) % 4].x, 
+          grabbers[(i + 1) % 4].y);
+      }
+    }
 
-        // force same point at first time to avoid non-sense with speed
-        // and acc computed values
-        if (!simAlreadyActive) {
-          simPoint = new TouchPoint(targetPoint.x, targetPoint.y, 10,
-              null, false, null);
-          simPoint.setState("new");
+    if (simActive) {
 
-        } else {
-          simPoint.lastPoint = new TouchPoint(simPoint.x, simPoint.y,
-              10, null, true, null);
-          simPoint.x = targetPoint.x;
-          simPoint.y = targetPoint.y;
-          simPoint.setState("update");
-        }
+      PVector targetPoint = getProjectedPoint(new PVector(mouseX
+        - mainOffset.x, mouseY - mainOffset.y));
 
-        // if (!simAlreadyActive) {
-        // // New point
-        // tuioServer.send("update", simPoint);
-        // simAlreadyActive = true;
-        // } else {
-        // // Already there
-        // tuioServer.send("update", simPoint);
-        // }
-
-        if (showFeedback) {
-          pushMatrix();
-          translate(-mainOffset.x, -mainOffset.y);
-          feedback.drawPoint(targetPoint, -1, color(255, 255, 255));
-          popMatrix();
-        }
+      // force same point at first time to avoid non-sense with speed
+      // and acc computed values
+      if (!simAlreadyActive) {
+        simPoint = new TouchPoint(targetPoint.x, targetPoint.y, 10, 
+          null, false, null);
+        simPoint.setState("new");
       } else {
-        if (simAlreadyActive) {
-          // Point destroy
-          simAlreadyActive = false;
-          simPoint.setState("destroy");
-          // tuioServer.send("destroy", simPoint);
-        }
+        simPoint.lastPoint = new TouchPoint(simPoint.x, simPoint.y, 
+          10, null, true, null);
+        simPoint.x = targetPoint.x;
+        simPoint.y = targetPoint.y;
+        simPoint.setState("update");
+      }
+
+      // if (!simAlreadyActive) {
+      // // New point
+      // tuioServer.send("update", simPoint);
+      // simAlreadyActive = true;
+      // } else {
+      // // Already there
+      // tuioServer.send("update", simPoint);
+      // }
+
+      if (showFeedback) {
+        pushMatrix();
+        translate(-mainOffset.x, -mainOffset.y);
+        feedback.drawPoint(targetPoint, -1, color(255, 255, 255));
+        popMatrix();
+      }
+    } else {
+      if (simAlreadyActive) {
+        // Point destroy
+        simAlreadyActive = false;
+        simPoint.setState("destroy");
+        // tuioServer.send("destroy", simPoint);
       }
     }
   }
+}
 
 void draw2()
 {
@@ -1009,18 +947,18 @@ void draw2()
       PVector targetPoint = getProjectedPoint(new PVector(mouseX-mainOffset.x, mouseY-mainOffset.y));
 
       //force same point at first time to avoid non-sense with speed and acc computed values
-    /*  if (!simAlreadyActive)
-      {
-        simPoint = new TouchPoint(targetPoint.x, targetPoint.y, 10, null, false);
-        simPoint.setState("new");
-      } else
-      {
-        simPoint.lastPoint = new TouchPoint(simPoint.x, simPoint.y, 10, null, true);
-        simPoint.x = targetPoint.x;
-        simPoint.y = targetPoint.y;
-        simPoint.setState("update");
-      }
-*/
+      /*  if (!simAlreadyActive)
+       {
+       simPoint = new TouchPoint(targetPoint.x, targetPoint.y, 10, null, false);
+       simPoint.setState("new");
+       } else
+       {
+       simPoint.lastPoint = new TouchPoint(simPoint.x, simPoint.y, 10, null, true);
+       simPoint.x = targetPoint.x;
+       simPoint.y = targetPoint.y;
+       simPoint.setState("update");
+       }
+       */
       if (!simAlreadyActive)
       {
         //New point
@@ -1402,58 +1340,58 @@ float calculateNonLinearCoord(PVector va, PVector va2, PVector vb, PVector vb2, 
 
 
 public void calibratePlane() {
-    int[] depthMap = getDepthMap();
-    int i;
+  int[] depthMap = getDepthMap();
+  int i;
 
-    planeMask.colorMode(ALPHA);
-    planeMask.beginDraw();
-    planeMask.background(100);
-    planeMask.fill(255);
-    planeMask.noStroke();
-    planeMask.beginShape();
-    for (i = 0; i < grabbers.length; i++) {
-      planeMask.vertex(grabbers[i].x, grabbers[i].y);
-    }
-    planeMask.endShape(CLOSE);
-    planeMask.endDraw();
+  planeMask.colorMode(ALPHA);
+  planeMask.beginDraw();
+  planeMask.background(100);
+  planeMask.fill(255);
+  planeMask.noStroke();
+  planeMask.beginShape();
+  for (i = 0; i < grabbers.length; i++) {
+    planeMask.vertex(grabbers[i].x, grabbers[i].y);
+  }
+  planeMask.endShape(CLOSE);
+  planeMask.endDraw();
 
-    PImage tempMask = planeMask.get();
+  PImage tempMask = planeMask.get();
 
-    /*
+  /*
      * PImage planeMask = new PImage(imageWidth,imageHeight,ALPhA);
-     * planeMask.loadPixels();
-     */
-    tempMask.loadPixels();
-    planePixels = tempMask.pixels;
-    /* planeMask.updatePixels(); */
+   * planeMask.loadPixels();
+   */
+  tempMask.loadPixels();
+  planePixels = tempMask.pixels;
+  /* planeMask.updatePixels(); */
 
-    boolean[] planeBuffer = new boolean[pixelsLength];
+  boolean[] planeBuffer = new boolean[pixelsLength];
 
-    planePixelsLength = 0;
+  planePixelsLength = 0;
 
-    // Get the length of the plane pixels array
-    for (i = 0; i < pixelsLength; i++) {
-      if (planePixels[i] == -1) {
-        planeBuffer[i] = true;
-        planePixelsLength++;
-      }
-    }
-
-    // fill the planeDepthPixels array with pixels indexes and planeDepthMap
-    // with depthMap data
-
-    planeDepthPixels = new int[planePixelsLength];
-    planeDepthMap = new int[planePixelsLength];
-
-    int planeDepthPixelsIndex = 0;
-    for (i = 0; i < pixelsLength; i++) {
-      if (planeBuffer[i]) {
-        planeDepthPixels[planeDepthPixelsIndex] = i;
-        planeDepthMap[planeDepthPixelsIndex] = depthMap[i];
-        planeDepthPixelsIndex++;
-      }
+  // Get the length of the plane pixels array
+  for (i = 0; i < pixelsLength; i++) {
+    if (planePixels[i] == -1) {
+      planeBuffer[i] = true;
+      planePixelsLength++;
     }
   }
+
+  // fill the planeDepthPixels array with pixels indexes and planeDepthMap
+  // with depthMap data
+
+  planeDepthPixels = new int[planePixelsLength];
+  planeDepthMap = new int[planePixelsLength];
+
+  int planeDepthPixelsIndex = 0;
+  for (i = 0; i < pixelsLength; i++) {
+    if (planeBuffer[i]) {
+      planeDepthPixels[planeDepthPixelsIndex] = i;
+      planeDepthMap[planeDepthPixelsIndex] = depthMap[i];
+      planeDepthPixelsIndex++;
+    }
+  }
+}
 
 
 
@@ -1496,7 +1434,7 @@ void processBlobs(PImage img, PVector offset, int w, int h)
 
       PVector reelCoordVec = blobs[i].getCentroid();
       PVector tmpVec = getProjectedPoint(reelCoordVec);
-    //  blobPoints[goodBlobsNumber] = new TouchPoint(tmpVec.x, tmpVec.y, blobs[i].getArea(), reelCoordVec, false);
+      //  blobPoints[goodBlobsNumber] = new TouchPoint(tmpVec.x, tmpVec.y, blobs[i].getArea(), reelCoordVec, false);
       //println(reelCoordVec+" /" +tmpVec);
       goodBlobsNumber++;
     }
@@ -1838,8 +1776,8 @@ void keyPressed(KeyEvent e)
     break;
 
   case 'c':
-    
-      calibratePlane = true;
+
+    calibratePlane = true;
     break;
 
   case 'k':
