@@ -17,7 +17,6 @@ class TouchPoint extends PVector {
 
     boolean object = false;
     boolean touch = false;
-    boolean mano = false;
 
     Float angle = null;
 

@@ -74,7 +74,7 @@ class TUIOServer
     myBundle.add(myMessage);
   
     /* send the message */
-    oscP5.send(myBundle, remote); 
+    oscP5.send(myBundle, remote);  //<>//
     
     
     

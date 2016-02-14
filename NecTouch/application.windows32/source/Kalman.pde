@@ -11,7 +11,7 @@ public class KalmanFacade {
     this.y = y;
   }
 
-  public PVector getCorrected() {
+  public float[] getCorrected() {
     // TODO Auto-generated method stub
     return null;
   }
