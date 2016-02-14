@@ -59,7 +59,7 @@ boolean nonLinearMode;
 
 PGraphics planeMask;
 
-int minDistance, maxDistance, minBlobSize, maxBlobSize;
+int minDistance, minBlobSize, maxBlobSize;
 
 PImage blobsImage;
 //Detector bd;
@@ -71,7 +71,9 @@ TouchPoint[] touchPoints;
 
 static int globalTouchPointIndex;
 
-int minDiff, minDiffTouch = 8, maxDiff, minBlobWeight, maxBlobWeight;
+int minDiffTouch = 1, minDiff = 2, maxDiff = 3, 
+  minDiffT = 2, maxDiffT = 10, 
+  minBlobWeight, maxBlobWeight;
 
 
 PImage blobsImageTouch;
@@ -89,12 +91,16 @@ boolean autoCalibrate;
 
 boolean calibratePlane = false;
 
+PVector topLeft = new PVector(imageWidth, imageHeight);
+PVector bottomRight = new PVector(0, 0);
+int[] floorMaskPixels = new int[pixelsLength];
+
 void setup()
 {
   println("setup");
   criticalStop = false;
   textMode(MODEL);
- 
+
 
   config = loadXML("config.xml");
 
@@ -195,17 +201,16 @@ void setup()
   pixelsLength = imageWidth * imageHeight;
 
   planeMask = createGraphics(imageWidth, imageHeight, P2D);
-  
-    blobsImage = createImage(imageWidth, imageHeight, ARGB);
+
+  blobsImage = createImage(imageWidth, imageHeight, ARGB);
   blobsImageTouch = createImage(imageWidth, imageHeight, ARGB);
   blobsImageBlank = createImage(imageWidth, imageHeight, ARGB);
- 
+
 
   XML xmlDetection = config.getChild("detection");
 
   minDistance = xmlDetection.getInt("minDistance");
-  maxDistance = xmlDetection.getInt("maxDistance");
-  maxDistance = 100;
+
   minBlobSize = xmlDetection.getInt("minBlobSize");
   maxBlobSize = xmlDetection.getInt("maxBlobSize");
   nonLinearMode = boolean(xmlDetection.getString("nonLinear"));
@@ -263,6 +268,9 @@ void setup()
    */
   Slider s1 = controlP5.addSlider("gridLines", 0, 20, 330, 100, 80, 10);
   s1.setNumberOfTickMarks(20);
+
+  topLeft = new PVector(imageWidth, imageHeight);
+  bottomRight = new PVector(0, 0);
 }
 
 int[] getDepthMap() {
@@ -292,7 +300,7 @@ void draw() {
   }
 
   if (doCalibrate) {
-      println("calibration done !");
+    println("calibration done !");
     calibratePlane();
   }
 
@@ -314,7 +322,18 @@ void draw() {
 
   if (planePixelsLength > 0) {
 
-    processBlobAndImage(kinectImage, depthMap);
+    processImageBlob(kinectImage, depthMap);
+    processBlobs();
+
+    if (!miniMode) {
+      if (maskFloor) {
+        kinectImage.mask(floorMaskPixels);
+        image(kinectImage, 0, 0);
+      }
+
+      image(blobsImage, 0, 0);
+      image(blobsImageTouch, 0, 0);
+    }
   }
 
   popMatrix(); // mainOffset pop
@@ -445,16 +464,16 @@ private void drawGUI() {
 
   if (!miniMode) {
     fill(255);
-    text("Min / Max diff touch ((u-U) & '+' / '-') : " + minDiffTouch, 
+    text("Min (n/N) : " + minDiffTouch, 
       10, height - 75, 500, 20);
 
-  minDiff = 2;
-  maxDiff = 100;
-  minBlobWeight = 35;
-  maxBlobWeight = 1210;
-  
-    text("Min / Max diff ((Ctrl or Shift) & '+' / '-') : " + minDiff
+    minBlobWeight = 35;
+    maxBlobWeight = 1210;
+
+    text("Min / Max diff (v/V - b/B) : " + minDiff
       + " -> " + maxDiff, 10, height - 35, 400, 20);
+    text("Min / Max diff Touch (','/';' - '.'/':') : " + minDiffT
+      + " -> " + maxDiffT, 10, height - 55, 400, 20);
     text("Min / Max blob size ((Alt or Nothing) & '+' / '-') : "
       + minBlobWeight + " -> " + maxBlobWeight, 10, height - 15, 
       450, 20);
@@ -462,196 +481,6 @@ private void drawGUI() {
   popStyle();
 }
 
-private void processBlobAndImage(PImage kinectImage, int[] depthMap) {
-  int i;
-
-  blobsImage.set(0, 0, blobsImageBlank);
-  blobsImageTouch.set(0, 0, blobsImageBlank);
-
-  blobsImage.loadPixels();
-  blobsImageTouch.loadPixels();
-
-  int[] floorMaskPixels = new int[pixelsLength];
-
-  PVector topLeft = new PVector(imageWidth, imageHeight);
-  PVector bottomRight = new PVector(0, 0);
-
-  for (i = 0; i < planePixelsLength; i++) {
-    int targetPixelIndex = planeDepthPixels[i];
-    int refDepth = (int) red(planeDepthMap[i]);
-    int curDepth = (int) red(depthMap[targetPixelIndex]);
-    // filterImage.pixels[targetPixelIndex] = color(255,0,0,50);
-    int diffDepth = refDepth - curDepth;
-
-    // blobsImage.pixels[targetPixelIndex] = color(0,225,120,150);
-
-    if (diffDepth > minDiffTouch) { 
-      // ESTAMOS POR ENCIMA DEL �REA DE CONTACTO
-
-      if (diffDepth < minDiff) {
-        // ESTAMOS EN ZONA DE TOUCH
-        blobsImageTouch.pixels[targetPixelIndex] = color(0, 255, 0, 
-          150);
-      }
-      // QUiZA ESTAMOS EN ZONA DE BLOB
-      if (maskFloor) {
-        floorMaskPixels[targetPixelIndex] = 255;
-      }
-
-      // blobsImage.pixels[targetPixelIndex] =
-      // color(0,50,255,150);
-        maxDiff = 100;
-      if (diffDepth < maxDiff) {
-        // AHORA S� ESTAMOS EN ZONA DE BLOB
-        int reelX = targetPixelIndex % imageWidth;
-        int reelY = floor(targetPixelIndex / imageWidth);
-
-        topLeft.x = min(topLeft.x, reelX);
-        topLeft.y = min(topLeft.y, reelY);
-        bottomRight.x = max(bottomRight.x, reelX);
-        bottomRight.y = max(bottomRight.y, reelY);
-
-        // println(curDepth+"-"+refDepth+" = "+(curDepth-refDepth));
-        blobsImage.pixels[targetPixelIndex] = color(255, 0, 0, 150);
-      }
-    }
-  }
-
-  blobsImage.updatePixels();
-
-  if (topLeft.x < bottomRight.x) {
-
-    topLeft.x -= 10;
-    topLeft.y -= 10;
-    bottomRight.x += 10;
-    bottomRight.y += 10;
-
-    int rectW = (int) (bottomRight.x - topLeft.x);
-    int rectH = (int) (bottomRight.y - topLeft.y);
-
-    if (miniMode) {
-      pushStyle();
-      stroke(40, 120, 230, 100);
-      strokeWeight(2);
-      noFill();
-      rect(topLeft.x, topLeft.y, rectW, rectH);
-      popStyle();
-    }
-
-    // blobsImage = blobsImage.get((int)topLeft.x, (int)topLeft.y,
-    // rectW, rectH);*/
-    processBlobs(blobsImage, blobsImageTouch, topLeft, rectW, rectH);
-
-    if (!miniMode) {
-      if (maskFloor) {
-        kinectImage.mask(floorMaskPixels);
-        image(kinectImage, 0, 0);
-      }
-
-      image(blobsImage, 0, 0);
-      image(blobsImageTouch, 0, 0);
-    }
-  } else {
-    processBlobs(blobsImage, blobsImageTouch, null, 0, 0);
-  }
-}
-
-public void processBlobs(PImage img, PImage touchImg, PVector offset, 
-  int w, int h) {
-
-  goodBlobsNumber = 0;
-  // goodBlobsNumberConvexityDefect = 0;
-  rawBlobsNumber = 0;
-
-  TouchPoint[] blobPoints;
-
-
-  if (w == 0 || h == 0) {
-    blobPoints = new TouchPoint[0];
-
-  } else {
-
-    List<TouchPoint> pointList = new ArrayList<NecTouch.TouchPoint>();
-
-    BiBlob[] blobs = new BiBlob[0];
-
-    blobs = cv.findBlobs(blobsImage);
-
-    processBlobsTouchs(pointList, blobs);
-
-    text("" + goodBlobsNumber, 100, 100);
-
-    blobPoints = new TouchPoint[pointList.size()];
-    blobPoints = pointList.toArray(blobPoints);
-  }
-  // linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
-
-  touchPoints = blobPoints;
-  List<Object> msgList = new ArrayList<Object>();
-  for (int hh = 0; hh < touchPoints.length; hh++) {
-    TouchPoint point = touchPoints[hh];
-    msgList.add("" + point.x);
-    msgList.add("" + point.y);
-  }
-
-  Object[] msg = new Object[msgList.size()];
-  msgList.toArray(msg);
-  
-    // if (!simAlreadyActive) {
-      // // New point
-      // tuioServer.send("update", simPoint);
-      // simAlreadyActive = true;
-      // } else {
-      // // Already there
-      // tuioServer.send("update", simPoint);
-      // }
-  
-}
-
-public TouchPoint buildTouchPointFromBlob(PVector reelCoordVec, 
-  PVector tmpVec, BiBlob blob) {
-
-  // List<PVector> vertxList = new ArrayList<PVector>();
-  //
-  PVector[] vertexPvector = new PVector[blob.getPoints().length];
-  for (int j = 0; j < blob.getPoints().length; j += 1) {
-    PVector temp = getProjectedPoint(new PVector(blob.getPoints()[j].x, 
-      blob.getPoints()[j].y));
-    vertexPvector[j] = new PVector(temp.x, temp.y);
-  }
-
-  TouchPoint point = new TouchPoint(tmpVec.x, tmpVec.y, blob.getArea(), 
-    reelCoordVec, false, vertexPvector);
-
-  return point;
-}
-private void processBlobsTouchs(List<TouchPoint> pointList, BiBlob[] blobs) {
-  int i;
-  // rawBlobsNumber = blobs.length;
-  // blobPoints = new TouchPoint[rawBlobsNumber];
-  for (i = 0; i < blobs.length; i++) {
-    // Rectangle r = blobs[i].rectangle;
-
-    BiBlob blob = blobs[i];
-
-    PVector reelCoordVec = new PVector(blob.getCentroid().x, 
-      blob.getCentroid().y);
-    PVector tmpVec = getProjectedPoint(reelCoordVec);
-
-    TouchPoint point = buildTouchPointFromBlob(reelCoordVec, tmpVec, 
-      blob);
-    point.touch = true;
-    pointList.add(point);
-    goodBlobsNumber++;
-
-    if (!miniMode) {
-      text("x:" + blob.getCentroid().x, blob.getCentroid().x + 10, 
-        blob.getCentroid().y);
-      text("y:" + blob.getCentroid().y, blob.getCentroid().x + 10, 
-        blob.getCentroid().y + 20);
-    }
-  }
-}
 
 
 private void simulationAndTransformation() {
@@ -802,172 +631,6 @@ public void calibratePlane() {
 
 
 
-void processBlobs(PImage img, PVector offset, int w, int h)
-{
-  goodBlobsNumber = 0;
-  rawBlobsNumber = 0;
-  TouchPoint[] blobPoints;
-  int i;
-
-  if (w == 0 || h == 0)
-  {
-    blobPoints = new TouchPoint[0];
-  } else
-  {
-
-    /*bd = new Detector(this,0,0, blobsImage.width, blobsImage.height, 255 );
-     bd.findBlobs(blobsImage.pixels, blobsImage.width, blobsImage.height);
-     bd.loadBlobsFeatures();// to call always before to use a method returning or processing a blob feature
-     bd.weightBlobs(true);
-     
-     rawBlobsNumber = bd.getBlobsNumber();*/
-
-    /*cv.copy(blobsImage);
-     cv.ROI((int)offset.x, (int)offset.y, w, h);
-     
-     Blob[] blobs = cv.blobs(minBlobSize, maxBlobSize, 20, false, 4);
-     rawBlobsNumber = blobs.length;*/
-
-    BiBlob[] blobs = new BiBlob[0];// cv.blobs(minBlobWeight, 50000, 20,
-    // false, 25, false); // blobs
-    // javacvPro
-    blobs = cv.findBlobs(blobsImage);
-
-    blobPoints = new TouchPoint[rawBlobsNumber];
-
-    for (i = 0; i < rawBlobsNumber; i++)
-    {
-      //Rectangle r = blobs[i].rectangle;
-
-      PVector reelCoordVec = blobs[i].getCentroid();
-      PVector tmpVec = getProjectedPoint(reelCoordVec);
-      //  blobPoints[goodBlobsNumber] = new TouchPoint(tmpVec.x, tmpVec.y, blobs[i].getArea(), reelCoordVec, false);
-      //println(reelCoordVec+" /" +tmpVec);
-      goodBlobsNumber++;
-    }
-
-    while (blobPoints.length > goodBlobsNumber) blobPoints = (TouchPoint[]) shorten(blobPoints);
-  }
-
-
-  int pLen = touchPoints.length;
-
-  float minDist = 0;
-  int minIndex = -1;
-  float curDist = 0;
-
-  if (goodBlobsNumber >= pLen)
-  {
-
-    //println("");
-    //println("*** more or equal");
-    for (i = 0; i<pLen; i++)
-    {
-      //println("touchPoint " + i +", id :"+touchPoints[i].id);
-
-      minIndex = -1;
-      curDist = 0;
-      minDist = 0;
-
-      for (int j=0; j<goodBlobsNumber; j++)
-      {
-        if (blobPoints[j].linked) {
-          //println(" -> blob "+j+" is already linked");
-          //println(" -> test distance with blob "+j+" :"+curDist);
-        } else {
-          curDist = PVector.dist(touchPoints[i], blobPoints[j]);
-          //println(" -> test distance with blob "+j+" :"+curDist);
-
-          if (minIndex == -1 || curDist < minDist)
-          {
-            minDist = curDist;
-            minIndex = j;
-          }
-        }
-      }
-
-      //println(" -> linked with index :"+minIndex+", distance "+round(minDist)+", tmpId = "+blobPoints[minIndex].id+", touchId = "+touchPoints[i].id);
-      blobPoints[minIndex].id = touchPoints[i].id;
-      blobPoints[minIndex].lastPoint = touchPoints[i];
-      blobPoints[minIndex].linked = true;
-
-      /*if(PVector.dist(blobPoints[minIndex], blobPoints[minIndex].lastPoint) < .005)
-       {
-       blobPoints[minIndex] = blobPoints[minIndex].lastPoint;
-       }*/
-
-      //blobPoints[minIndex].x = blobPoints[minIndex].lastPoint.x + (blobPoints[minIndex].x - blobPoints[minIndex].lastPoint.x) * .5;
-      //blobPoints[minIndex].y = blobPoints[minIndex].lastPoint.y + (blobPoints[minIndex].y - blobPoints[minIndex].lastPoint.y) * .5;
-    }
-
-
-
-    for (i = 0; i< goodBlobsNumber; i++)
-    {
-
-      if (!blobPoints[i].linked)
-      {
-        //New point
-        //println("new Point");
-        blobPoints[i].setState("new");
-      } else
-      {
-        //blobPoints[i].setState("update");
-      }
-    }
-  } else
-  {
-    //println("************************ LESS ***");
-
-    for (i = 0; i<pLen; i++)
-    {
-      touchPoints[i].linked = false;
-    }
-
-
-    for (i = 0; i<goodBlobsNumber; i++)
-    {
-      //println("blobPoint" + i +", id :"+blobPoints[i].id);
-
-      minIndex = -1;
-      curDist = 0;
-      minDist = 0;
-
-      TouchPoint[] alivePoints = new TouchPoint[0];
-
-      for (int j=0; j<pLen; j++)
-      {
-        if (touchPoints[j].linked) {
-          // println(" -> touchpoint "+j+" is already linked");
-        } else {
-
-          curDist = PVector.dist(blobPoints[i], touchPoints[j]);
-          //println(" -> test distance with touchpoint "+j+" :"+curDist);
-
-          if (minIndex == -1 || curDist < minDist)
-          {
-            minDist = curDist;
-            minIndex = j;
-          }
-        }
-      }
-
-      if (minIndex != -1)
-      {
-        //println(" -> linked with index :"+minIndex+", distance "+minDist+", touchId :"+touchPoints[minIndex].id);
-        blobPoints[i].id = touchPoints[minIndex].id;
-        blobPoints[i].lastPoint = touchPoints[minIndex];
-        touchPoints[minIndex].linked = true;
-      }
-    }
-  }
-
-
-  touchPoints = blobPoints;
-  tuioServer.send("update", touchPoints);
-}
-
-
 
 PVector getProjectedPoint(PVector touchPoint)
 {
@@ -1030,258 +693,5 @@ void setMiniMode()
   {
     size(imageWidth+(int)mainOffset.x, imageHeight+(int)mainOffset.y);
     frame.setSize(width+80, height+80);
-  }
-}
-
-
-
-void saveConfig()
-{
-  for (int i=0; i<grabbers.length; i++)
-  {
-    config.getChild("grabbers").getChild(i).setInt("x", (int)grabbers[i].x);
-    config.getChild("grabbers").getChild(i).setInt("y", (int)grabbers[i].y);
-  }
-
-
-
-  config.getChild("detection").setInt("minDistance", minDistance);
-  config.getChild("detection").setInt("maxDistance", maxDistance);
-  config.getChild("detection").setInt("minBlobSize", minBlobSize);
-  config.getChild("detection").setInt("maxBlobSize", maxBlobSize);
-
-  config.getChild("startup").setString("miniMode", str(miniMode));
-  config.getChild("startup").setString("showHelpers", str(showHelpers));
-  config.getChild("startup").setString("showGrid", str(showGrid));
-  config.getChild("startup").setString("showInfos", str(showInfos));
-  config.getChild("startup").setString("showDrawingLines", str(showDrawingLines));
-  config.getChild("startup").setString("showFeedback", str(showFeedback));
-  config.getChild("startup").setString("showLabels", str(showLabels));
-  config.getChild("startup").setString("autoCalibrate", str(autoCalibrate));
-
-  config.getChild("kinect").setString("mirror", str(mirrorMode));
-  config.getChild("kinect").setString("enableRGB", str(enableRGB));
-
-  config.getChild("detection").setString("invertX", str(invertX));
-  config.getChild("detection").setString("invertY", str(invertY));
-  config.getChild("detection").setString("swapXY", str(swapXY));
-
-  println(config.toString());
-  //config.save("data/config.xml");
-  println("config saved !");
-}
-
-void mousePressed()
-{
-  if (criticalStop) return;
-
-  Boolean grabberPressed = false;
-  for (int i=0; i<4; i++)
-  {
-    if (grabbers[i].mousePressed())
-    {
-      grabberPressed = true;
-      return;
-    }
-  }
-
-  if (pixelInPoly(grabbers, new PVector(mouseX-mainOffset.x, mouseY-mainOffset.y)))
-  {
-    simActive = true;
-    simAlreadyActive = false;
-  } else if (mouseY > 110)
-  {
-    println("mouseY :"+mouseY);
-    tmpMouseOffset = new PVector(mouseX, mouseY);
-    tmpInitOffset = mainOffset;
-    offsetting = true;
-  }
-}
-
-void mouseReleased()
-{
-  if (criticalStop) return;
-
-  for (int i=0; i<4; i++)
-  {
-    grabbers[i].pressed = false;
-  }
-
-  simActive = false;
-  offsetting = false;
-}
-
-
-void controlEvent(ControlEvent e)
-{
-  if (e.isTab())
-  {
-    //TODO
-    //miniMode = e.tab().name().equals("miniMode");
-    //setMiniMode();
-  } else {
-    println(e.isGroup());
-    if (e.isGroup())
-    {
-      println("group :"+ e.getName()+"/"+e.getValue());
-      enableRGB = e.getValue() == 1?true:false;
-    } else
-    {
-      String n = e.getName(); 
-      if (n.equals("mirrorMode"))
-      {
-        //TODO
-        //context.setMirror(mirrorMode);
-      }
-    }
-  }
-}
-
-
-void keyPressed(KeyEvent e)
-{
-
-  if (criticalStop) return;
-
-  switch(key)
-  {
-
-  case 'h':
-    showHelpers = !showHelpers;
-    break;
-
-  case 'g':
-    showGrid = !showGrid;
-    break;
-
-  case 'd':
-    showDrawingLines  = !showDrawingLines;
-    break;
-
-  case 'i':
-    showInfos = !showInfos;
-    break;
-
-  case '8':
-    gridLines++;
-    break;
-
-  case '2':
-    gridLines--;
-    break;
-
-  case 'l':
-    showLabels = !showLabels;
-    break;
-
-  case 'f':
-    showFeedback= !showFeedback;
-    break;
-
-  case 'p':
-    doCalibrate = !doCalibrate;
-    break;
-
-  case 'c':
-
-    calibratePlane = true;
-    break;
-
-  case 'k':
-    enableRGB = !enableRGB;
-    break;
-
-  case 'r':
-    mirrorMode = !mirrorMode;
-    //TODO
-    //context.setMirror(mirrorMode);
-    break;
-
-  case 'w':
-    swapXY = !swapXY;
-    break;
-
-  case 'x':
-    invertX = !invertX;
-    break;
-
-  case 'y':
-    invertY = !invertY;
-    break;
-
-  case 's':
-    saveConfig();
-    break;
-
-  case 'm':
-
-    doMask = !doMask;
-    maskFloor = doMask;
-    println("doMask & maskFloor "+doMask);
-    if (doMask && planePixels == null)
-    {
-      calibratePlane();
-    }
-
-    break;
-
-  case ' ':
-    miniMode = !miniMode;
-    controlP5.getTab("miniMode").setActive(miniMode);
-    controlP5.getTab("default").setActive(!miniMode);
-    setMiniMode();
-  }
-
-  println(e.getKeyCode());
-  switch(e.getKeyCode())
-  {
-
-  case 107:
-  case 47:
-    if (e.isShiftDown())
-    {
-      maxDistance++;
-    } else if (e.isControlDown())
-    {
-      minDistance++;
-    } else if (e.isAltDown())
-    {
-      maxBlobSize++;
-    } else
-    {
-      minBlobSize++;
-    }
-    break;
-
-  case 109:
-  case 61:
-    if (e.isShiftDown())
-    {
-      maxDistance--;
-    } else if (e.isControlDown())
-    {
-      minDistance--;
-    } else if (e.isAltDown())
-    {
-      if (maxBlobSize > 0) maxBlobSize-- ;
-    } else
-    {
-      if (minBlobSize > 0) minBlobSize--;
-    }
-    break;
-
-
-  case 37:
-    mainOffset.x -=2;
-    break;
-  case 38:
-    mainOffset.y -=2;
-    break;
-  case 39:
-    mainOffset.x +=2;
-    break;
-  case 40:
-    mainOffset.y +=2;
-    break;
   }
 }
