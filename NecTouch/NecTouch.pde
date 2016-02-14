@@ -71,8 +71,8 @@ TouchPoint[] touchPoints;
 
 static int globalTouchPointIndex;
 
-int minDiffTouch = 1, minDiff = 2, maxDiff = 3, 
-  minDiffT = 2, maxDiffT = 10, 
+int minDiffTouch = 1, minDiff = 1, maxDiff = 3, 
+  minDiffT = 1, maxDiffT = 10, 
   minBlobWeight, maxBlobWeight;
 
 

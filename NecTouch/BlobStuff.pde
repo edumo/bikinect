@@ -68,7 +68,7 @@ public void processBlobs() {
     if (miniMode) {
       pushStyle();
       stroke(40, 120, 230, 100);
-      strokeWeight(2);
+      strokeWeight(1);
       noFill();
       rect(topLeft.x, topLeft.y, rectW, rectH);
       popStyle();

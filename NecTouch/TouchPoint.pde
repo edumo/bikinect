@@ -68,6 +68,7 @@ class TouchPoint extends PVector {
     public void drawPointReel(int c) {
       pushStyle();
       noFill();
+      noStroke();
       stroke(c);
       ellipse(reelCoord.x, reelCoord.y, weight / 5, weight / 5);
       popStyle();
