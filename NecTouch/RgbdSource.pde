@@ -4,9 +4,9 @@ public interface ImageSource {
 
   void setMirror(Boolean mirrorMode);
 
-  int depthWidth();
+  int getWidth();
 
-  int depthHeight();
+  int getHeight();
 
   void update();
 
@@ -68,12 +68,12 @@ public class Kinect2 implements ImageSource {
   }
 
   @Override
-  public int depthWidth() {
+  public int getWidth() {
     return KinectPV2.WIDTHDepth;
   }
 
   @Override
-  public int depthHeight() {
+  public int getHeight() {
     return KinectPV2.HEIGHTDepth;
   }
 

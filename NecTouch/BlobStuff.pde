@@ -110,7 +110,7 @@ public void processBlobs2(PImage img, PImage touchImg, PVector offset,
     blobPoints = new TouchPoint[pointList.size()];
     blobPoints = pointList.toArray(blobPoints);
   }
-  // linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
+   linkBlobs(blobPoints, touchPoints, goodBlobsNumber);
 
   touchPoints = blobPoints;
   List<Object> msgList = new ArrayList<Object>();
@@ -129,7 +129,7 @@ public void processBlobs2(PImage img, PImage touchImg, PVector offset,
   // simAlreadyActive = true;
   // } else {
   // // Already there
-  // tuioServer.send("update", simPoint);
+   tuioServer.send("update", touchPoints);
   // }
 }
 
@@ -178,168 +178,129 @@ private void processBlobsTouchs(List<TouchPoint> pointList, BiBlob[] blobs) {
   }
 }
 
+public void linkBlobs(TouchPoint[] blobPoints, TouchPoint[] touchPoints,
+      int goodBlobsNumber) {
 
-void processBlobs(PImage img, PVector offset, int w, int h)
-{
-  goodBlobsNumber = 0;
-  rawBlobsNumber = 0;
-  TouchPoint[] blobPoints;
-  int i;
+    int i;
+    int pLen = touchPoints.length;
 
-  if (w == 0 || h == 0)
-  {
-    blobPoints = new TouchPoint[0];
-  } else
-  {
+    float minDist = 0;
+    int minIndex = -1;
+    float curDist = 0;
 
-    /*bd = new Detector(this,0,0, blobsImage.width, blobsImage.height, 255 );
-     bd.findBlobs(blobsImage.pixels, blobsImage.width, blobsImage.height);
-     bd.loadBlobsFeatures();// to call always before to use a method returning or processing a blob feature
-     bd.weightBlobs(true);
-     
-     rawBlobsNumber = bd.getBlobsNumber();*/
+    if (goodBlobsNumber >= pLen) {
 
-    /*cv.copy(blobsImage);
-     cv.ROI((int)offset.x, (int)offset.y, w, h);
-     
-     Blob[] blobs = cv.blobs(minBlobSize, maxBlobSize, 20, false, 4);
-     rawBlobsNumber = blobs.length;*/
+      // println("");
+      // println("*** more or equal");
+      for (i = 0; i < pLen; i++) {
+        // println("touchPoint " + i +", id :"+touchPoints[i].id);
 
-    BiBlob[] blobs = new BiBlob[0];// cv.blobs(minBlobWeight, 50000, 20,
-    // false, 25, false); // blobs
-    // javacvPro
-    blobs = cv.findBlobs(blobsImage);
+        minIndex = -1;
+        curDist = 0;
+        minDist = 0;
 
-    blobPoints = new TouchPoint[rawBlobsNumber];
+        for (int j = 0; j < goodBlobsNumber; j++) {
+          if (blobPoints[j].linked) {
+            // println(" -> blob "+j+" is already linked");
+            // println(" -> test distance with blob "+j+" :"+curDist);
+          } else {
+            curDist = PVector.dist(touchPoints[i], blobPoints[j]);
+            // println(" -> test distance with blob "+j+" :"+curDist);
 
-    for (i = 0; i < rawBlobsNumber; i++)
-    {
-      //Rectangle r = blobs[i].rectangle;
-
-      PVector reelCoordVec = blobs[i].getCentroid();
-      PVector tmpVec = getProjectedPoint(reelCoordVec);
-      //  blobPoints[goodBlobsNumber] = new TouchPoint(tmpVec.x, tmpVec.y, blobs[i].getArea(), reelCoordVec, false);
-      //println(reelCoordVec+" /" +tmpVec);
-      goodBlobsNumber++;
-    }
-
-    while (blobPoints.length > goodBlobsNumber) blobPoints = (TouchPoint[]) shorten(blobPoints);
-  }
-
-
-  int pLen = touchPoints.length;
-
-  float minDist = 0;
-  int minIndex = -1;
-  float curDist = 0;
-
-  if (goodBlobsNumber >= pLen)
-  {
-
-    //println("");
-    //println("*** more or equal");
-    for (i = 0; i<pLen; i++)
-    {
-      //println("touchPoint " + i +", id :"+touchPoints[i].id);
-
-      minIndex = -1;
-      curDist = 0;
-      minDist = 0;
-
-      for (int j=0; j<goodBlobsNumber; j++)
-      {
-        if (blobPoints[j].linked) {
-          //println(" -> blob "+j+" is already linked");
-          //println(" -> test distance with blob "+j+" :"+curDist);
-        } else {
-          curDist = PVector.dist(touchPoints[i], blobPoints[j]);
-          //println(" -> test distance with blob "+j+" :"+curDist);
-
-          if (minIndex == -1 || curDist < minDist)
-          {
-            minDist = curDist;
-            minIndex = j;
+            if (minIndex == -1 || curDist < minDist) {
+              minDist = curDist;
+              minIndex = j;
+            }
           }
+        }
+
+        // println(" -> linked with index :"+minIndex+", distance "+round(minDist)+", tmpId = "+blobPoints[minIndex].id+", touchId = "+touchPoints[i].id);
+        blobPoints[minIndex].id = touchPoints[i].id;
+        blobPoints[minIndex].lastPoint = touchPoints[i];
+        blobPoints[minIndex].linked = true;
+        blobPoints[minIndex].updateKalman(touchPoints[i].kalmanFacade);
+
+        /*
+         * if(PVector.dist(blobPoints[minIndex],
+         * blobPoints[minIndex].lastPoint) < .005) {
+         * blobPoints[minIndex] = blobPoints[minIndex].lastPoint; }
+         */
+
+        // blobPoints[minIndex].x = blobPoints[minIndex].lastPoint.x +
+        // (blobPoints[minIndex].x - blobPoints[minIndex].lastPoint.x) *
+        // .5;
+        // blobPoints[minIndex].y = blobPoints[minIndex].lastPoint.y +
+        // (blobPoints[minIndex].y - blobPoints[minIndex].lastPoint.y) *
+        // .5;
+
+      }
+
+      for (i = 0; i < goodBlobsNumber; i++) {
+
+        if (!blobPoints[i].linked) {
+          // New point
+          // println("new Point");
+          blobPoints[i].setState("new");
+          blobPoints[i].buildKalman();
+          // tuioServer.send("new",blobPoints[i]);
+        } else {
+          // blobPoints[i].setState("update");
         }
       }
 
-      //println(" -> linked with index :"+minIndex+", distance "+round(minDist)+", tmpId = "+blobPoints[minIndex].id+", touchId = "+touchPoints[i].id);
-      blobPoints[minIndex].id = touchPoints[i].id;
-      blobPoints[minIndex].lastPoint = touchPoints[i];
-      blobPoints[minIndex].linked = true;
+    } else {
+      // println("************************ LESS ***");
 
-      /*if(PVector.dist(blobPoints[minIndex], blobPoints[minIndex].lastPoint) < .005)
-       {
-       blobPoints[minIndex] = blobPoints[minIndex].lastPoint;
-       }*/
-
-      //blobPoints[minIndex].x = blobPoints[minIndex].lastPoint.x + (blobPoints[minIndex].x - blobPoints[minIndex].lastPoint.x) * .5;
-      //blobPoints[minIndex].y = blobPoints[minIndex].lastPoint.y + (blobPoints[minIndex].y - blobPoints[minIndex].lastPoint.y) * .5;
-    }
-
-
-
-    for (i = 0; i< goodBlobsNumber; i++)
-    {
-
-      if (!blobPoints[i].linked)
-      {
-        //New point
-        //println("new Point");
-        blobPoints[i].setState("new");
-      } else
-      {
-        //blobPoints[i].setState("update");
+      for (i = 0; i < pLen; i++) {
+        touchPoints[i].linked = false;
       }
-    }
-  } else
-  {
-    //println("************************ LESS ***");
 
-    for (i = 0; i<pLen; i++)
-    {
-      touchPoints[i].linked = false;
-    }
+      for (i = 0; i < goodBlobsNumber; i++) {
+        // println("blobPoint" + i +", id :"+blobPoints[i].id);
 
+        minIndex = -1;
+        curDist = 0;
+        minDist = 0;
 
-    for (i = 0; i<goodBlobsNumber; i++)
-    {
-      //println("blobPoint" + i +", id :"+blobPoints[i].id);
+        // TouchPoint[] alivePoints = new TouchPoint[0];
 
-      minIndex = -1;
-      curDist = 0;
-      minDist = 0;
+        for (int j = 0; j < pLen; j++) {
+          if (touchPoints[j].linked) {
+            // println(" -> touchpoint "+j+" is already linked");
+          } else {
 
-      TouchPoint[] alivePoints = new TouchPoint[0];
+            curDist = PVector.dist(blobPoints[i], touchPoints[j]);
+            // println(" -> test distance with touchpoint "+j+" :"+curDist);
 
-      for (int j=0; j<pLen; j++)
-      {
-        if (touchPoints[j].linked) {
-          // println(" -> touchpoint "+j+" is already linked");
-        } else {
-
-          curDist = PVector.dist(blobPoints[i], touchPoints[j]);
-          //println(" -> test distance with touchpoint "+j+" :"+curDist);
-
-          if (minIndex == -1 || curDist < minDist)
-          {
-            minDist = curDist;
-            minIndex = j;
+            if (minIndex == -1 || curDist < minDist) {
+              minDist = curDist;
+              minIndex = j;
+            }
           }
+        }
+
+        if (minIndex != -1) {
+          // println(" -> linked with index :"+minIndex+", distance "+minDist+", touchId :"+touchPoints[minIndex].id);
+          blobPoints[i].id = touchPoints[minIndex].id;
+          blobPoints[i].lastPoint = touchPoints[minIndex];
+          touchPoints[minIndex].linked = true;
+          blobPoints[i]
+              .updateKalman(touchPoints[minIndex].kalmanFacade);
+        } else {
+          // realmente por aqu� no deber�a de pasar significa que
+          // hemos perdido un cursor, es decir no pudimos reconocerlo
+          blobPoints[minIndex].buildKalman();
+          println("ERROR!!! no deber�amos pasar por aqu�, tenemos menos puntos,"
+              + " pero no pudimos reconocerlos todos");
         }
       }
 
-      if (minIndex != -1)
-      {
-        //println(" -> linked with index :"+minIndex+", distance "+minDist+", touchId :"+touchPoints[minIndex].id);
-        blobPoints[i].id = touchPoints[minIndex].id;
-        blobPoints[i].lastPoint = touchPoints[minIndex];
-        touchPoints[minIndex].linked = true;
-      }
+      /*
+       * for (i = 0;i<pLen;i++) { if (!touchPoints[i].linked) { //Point
+       * destroy println("Point destroy, id="+touchPoints[i].id);
+       * //tuioServer.send("destroy", touchPoints[i]); }else {
+       * 
+       * } }
+       */
     }
   }
-
-
-  touchPoints = blobPoints;
-  tuioServer.send("update", touchPoints);
-}

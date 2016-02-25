@@ -5,15 +5,11 @@ import diewald_CV_kit.utility.*;
 import oscP5.*;
 import netP5.*;
 import java.util.*;
-//import SimpleOpenNI.*;
-//import Blobscanner.*;
-//import hypermedia.video.*;
 import java.awt.Rectangle;
 import controlP5.*;
 
 import KinectPV2.KJoint;
 import KinectPV2.*;
-
 
 ControlP5 controlP5;
 
@@ -28,7 +24,6 @@ TUIOServer tuioServer;
 
 TouchPoint simPoint;
 boolean simActive, simAlreadyActive;
-
 
 PVector leftHorizon, rightHorizon, upLPoint, upRPoint;
 
@@ -62,7 +57,6 @@ PGraphics planeMask;
 int minDistance, minBlobSize, maxBlobSize;
 
 PImage blobsImage;
-//Detector bd;
 ComputerVision cv;
 
 int goodBlobsNumber, rawBlobsNumber;
@@ -101,7 +95,6 @@ void setup()
   criticalStop = false;
   textMode(MODEL);
 
-
   config = loadXML("config.xml");
 
   if (config == null)
@@ -128,29 +121,21 @@ void setup()
 
   println("before CV");
 
-  cv = new CVDiewald();
-  cv.init(this, KinectPV2.WIDTHDepth, KinectPV2.HEIGHTDepth);
-  println("after cv");
-  //cv.allocate(imageWidth,imageHeight);
-
 
   context = new Kinect2();
-  //Enable point cloud
-  //context.enableDepthImg(true);
-  //context.enablePointCloud(true);
-
   context.init(this);
 
-  println("AFTER");
+  cv = new CVDiewald();
+  cv.init(this, context.getWidth() , context.getHeight());
+  println("after cv");
 
+  println("AFTER");
   XML xmlKinect = config.getChild("kinect");
 
   frameRate(60);
 
   mirrorMode = boolean(xmlKinect.getString("mirror"));
   //context.setMirror(mirrorMode);
-
-
   XML xmlStartup = config.getChild("startup");
   //showHelpers = boolean(xmlStartup.getString("showHelpers", "true"));
   showGrid = boolean(xmlStartup.getString("showGrid", "true"));
@@ -382,9 +367,7 @@ void draw() {
     calibratePlane = false;
     calibratePlane();
   }
-  //    
-  //    ellipse(mouseX,mouseY,400,400);
-  //    image(blobsImage,mouseX,mouseY);
+
 }
 
 private void drawGUI() {
@@ -636,13 +619,8 @@ public void calibratePlane() {
   }
 }
 
-
-
-
 PVector getProjectedPoint(PVector touchPoint)
 {
-
-
   pushStyle();
   noStroke();
   pushMatrix();
@@ -652,8 +630,6 @@ PVector getProjectedPoint(PVector touchPoint)
   ellipse(0, 0, 10, 10);
   popMatrix();
   popStyle();
-
-
 
   float targetX, targetY;
   if (!nonLinearMode)
@@ -679,8 +655,6 @@ PVector getProjectedPoint(PVector touchPoint)
   if (invertX) targetX = 1-targetX;
   if (invertY) targetY = 1-targetY;
 
-  //println("targetX / Y ="+targetX+", "+targetY);
-
   return new PVector(targetX, targetY);
 }
 
@@ -692,6 +666,7 @@ color getColorForIndex(int i)
 
 void setMiniMode()
 {
+  /*
   if (miniMode)
   {
     size(200, 40);
@@ -700,5 +675,5 @@ void setMiniMode()
   {
     size(imageWidth+(int)mainOffset.x, imageHeight+(int)mainOffset.y);
     frame.setSize(width+80, height+80);
-  }
+  }*/
 }
