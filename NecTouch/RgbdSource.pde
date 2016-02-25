@@ -1,4 +1,4 @@
-public interface RgbdSource {
+public interface ImageSource {
 
   void alternativeViewPointDepthToImage();
 
@@ -14,14 +14,14 @@ public interface RgbdSource {
 
   int[] depthMap();
 
-  PImage depthImage();
+  PImage getDepthImage();
 
   void init(PApplet parent);
 
 }
 
 
-public class Kinect2 implements RgbdSource {
+public class Kinect2 implements ImageSource {
 
   KinectPV2 kinect;
 
@@ -51,6 +51,8 @@ public class Kinect2 implements RgbdSource {
     // kinect.activateRawDepth(true);
     // kinect.activateRawColor(true);
     kinect.enablePointCloud(true);
+      kinect.enableDepthImg(true);
+  //context.enablePointCloud(true);
     kinect.init();
 
   }
@@ -89,18 +91,18 @@ public class Kinect2 implements RgbdSource {
 
   @Override
   public int[] depthMap() {
-    if (depth == null) {
-      depth = kinect.getPointCloudDepthImage();
+  //  if (depth == null) {
+      depth = getDepthImage();
       depth.loadPixels();
-    }
+    //}
     return depth.pixels;
   }
 
   @Override
-  public PImage depthImage() {
-    if (depth != null) {
+  public PImage getDepthImage() {
+   // if (depth == null) {
       depth = kinect.getPointCloudDepthImage();
-    }
+   // }
     return depth;
   }
 

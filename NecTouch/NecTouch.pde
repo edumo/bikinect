@@ -41,7 +41,7 @@ boolean doCalibrate = false, doMask = false, mirrorMode = false;
 boolean miniMode;
 
 //SimpleOpenNI  context;
-KinectPV2 context;
+ImageSource context;
 
 boolean enableRGB;
 
@@ -134,12 +134,12 @@ void setup()
   //cv.allocate(imageWidth,imageHeight);
 
 
-  context = new KinectPV2(this);
+  context = new Kinect2();
   //Enable point cloud
-  context.enableDepthImg(true);
-  context.enablePointCloud(true);
+  //context.enableDepthImg(true);
+  //context.enablePointCloud(true);
 
-  context.init();
+  context.init(this);
 
   println("AFTER");
 
@@ -274,7 +274,10 @@ void setup()
 }
 
 int[] getDepthMap() {
-  PImage depth = context.getPointCloudDepthImage();
+  PImage depth = context.getDepthImage();
+  if (depth == null) {
+    return new int[0];
+  }
   depth.loadPixels();
   int[] depthMap = depth.pixels;
   return depthMap;
@@ -285,12 +288,12 @@ void draw() {
     return;
 
   background(0);
-  // context.update();
+  context.update();
   // draw
   pushMatrix();
   translate(mainOffset.x, mainOffset.y);
 
-  PImage kinectImage = null;
+  PImage image = null;
   int i;
   int[] depthMap = getDepthMap();
 
@@ -306,29 +309,33 @@ void draw() {
 
   if (!miniMode) {
     if (enableRGB) {
-      kinectImage = context.getPointCloudDepthImage();
+      image = context.getDepthImage();
     } else {
-      kinectImage = context.getPointCloudDepthImage();
+      image = context.getDepthImage();
     }
 
-    if (doMask && planePixels != null) {
-      kinectImage.mask(planePixels);
-    }
+    if (image != null) {
+      if (doMask && planePixels != null) {
+        image.mask(planePixels);
+      }
 
-    image(kinectImage, 0, 0);
+      image(image, 0, 0);
+    }else{
+       text("The image source is null",50,50); 
+    }
   }
 
   simulationAndTransformation();
 
   if (planePixelsLength > 0) {
 
-    processImageBlob(kinectImage, depthMap);
+    processImageBlob(image, depthMap);
     processBlobs();
 
     if (!miniMode) {
       if (maskFloor) {
-        kinectImage.mask(floorMaskPixels);
-        image(kinectImage, 0, 0);
+        image.mask(floorMaskPixels);
+        image(image, 0, 0);
       }
 
       image(blobsImage, 0, 0);
