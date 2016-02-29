@@ -1,5 +1,5 @@
 
-private void processImageBlob(PImage kinectImage, int[] depthMap) {
+private void processImageBlob(PImage kinectImage3, int[] depthMap) {
   int i;
 
   blobsImage.set(0, 0, blobsImageBlank);
@@ -22,11 +22,11 @@ private void processImageBlob(PImage kinectImage, int[] depthMap) {
     if (diffDepth > minDiffTouch) { 
       // ESTAMOS POR ENCIMA DEL �REA DE CONTACTO
 
-      if (minDiff < diffDepth && diffDepth < maxDiffT) {
+    /*  if (minDiff < diffDepth && diffDepth < maxDiffT) {
         // ESTAMOS EN ZONA DE TOUCH
         blobsImageTouch.pixels[targetPixelIndex] = color(0, 255, 0, 
           150);
-      }
+      }*/
       // QUiZA ESTAMOS EN ZONA DE BLOB
       if (maskFloor) {
         floorMaskPixels[targetPixelIndex] = 255;
@@ -35,8 +35,8 @@ private void processImageBlob(PImage kinectImage, int[] depthMap) {
       // blobsImage.pixels[targetPixelIndex] =
       // color(0,50,255,150);
 
-      if (diffDepth < maxDiff) {
-        // AHORA S� ESTAMOS EN ZONA DE BLOB
+      if (diffDepth < maxDiffT) {
+        // AHORA S ESTAMOS EN ZONA DE BLOB
         int reelX = targetPixelIndex % imageWidth;
         int reelY = floor(targetPixelIndex / imageWidth);
 
@@ -76,9 +76,9 @@ public void processBlobs() {
 
     // blobsImage = blobsImage.get((int)topLeft.x, (int)topLeft.y,
     // rectW, rectH);*/
-    processBlobs2(blobsImage, blobsImageTouch, topLeft, rectW, rectH);
+    processBlobs2(blobsImageTouch, blobsImageTouch, topLeft, rectW, rectH);
   } else {
-    processBlobs2(blobsImage, blobsImageTouch, null, 0, 0);
+    processBlobs2(blobsImageTouch, blobsImageTouch, null, 0, 0);
   }
 }
 

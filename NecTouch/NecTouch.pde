@@ -65,9 +65,12 @@ TouchPoint[] touchPoints;
 
 static int globalTouchPointIndex;
 
-int minDiffTouch = 1, minDiff = 1, maxDiff = 3, 
-  minDiffT = 1, maxDiffT = 10, 
-  minBlobWeight, maxBlobWeight;
+int minDiffTouch = 1, //minDiff = 1,
+  maxDiff = 3, 
+  //minDiffT = 1, 
+  maxDiffT = 10, 
+  minBlobWeight, 
+  maxBlobWeight;
 
 
 PImage blobsImageTouch;
@@ -126,7 +129,7 @@ void setup()
   context.init(this);
 
   cv = new CVDiewald();
-  cv.init(this, context.getWidth() , context.getHeight());
+  cv.init(this, context.getWidth(), context.getHeight());
   println("after cv");
 
   println("AFTER");
@@ -181,8 +184,8 @@ void setup()
   XML xmlTuio = config.getChild("tuio");
   tuioServer = new TUIOServer(xmlTuio.getString("host", "127.0.0.1"), xmlTuio.getInt("port", 3333));
 
-  imageWidth = KinectPV2.WIDTHDepth;
-  imageHeight = KinectPV2.HEIGHTDepth;
+  imageWidth = context.getWidth();
+  imageHeight = context.getHeight();
   pixelsLength = imageWidth * imageHeight;
 
   planeMask = createGraphics(imageWidth, imageHeight, P2D);
@@ -272,6 +275,8 @@ void draw() {
   if (criticalStop)
     return;
 
+  tweakQuickParamAdvance();
+
   background(0);
   context.update();
   // draw
@@ -305,8 +310,8 @@ void draw() {
       }
 
       image(image, 0, 0);
-    }else{
-       text("The image source is null",50,50); 
+    } else {
+      text("The image source is null", 50, 50);
     }
   }
 
@@ -367,7 +372,6 @@ void draw() {
     calibratePlane = false;
     calibratePlane();
   }
-
 }
 
 private void drawGUI() {
@@ -454,19 +458,17 @@ private void drawGUI() {
 
   if (!miniMode) {
     fill(255);
-    text("Min (n/N) : " + minDiffTouch, 
-      10, height - 75, 500, 20);
-
-    minBlobWeight = 35;
-    maxBlobWeight = 1210;
-
-    text("Min / Max diff (v/V - b/B) : " + minDiff
-      + " -> " + maxDiff, 10, height - 35, 400, 20);
-    text("Min / Max diff Touch (','/';' - '.'/':') : " + minDiffT
+    text("Min (n/N) : " + minDiffTouch, 10, height - 75, 500, 20);
+    // text(" Max diff (b/B) :  -> " + maxDiff, 10, height - 35, 400, 20);
+    text(" Max diff Touch ('.'/':') : "
       + " -> " + maxDiffT, 10, height - 55, 400, 20);
     text("Min / Max blob size ((Alt or Nothing) & '+' / '-') : "
-      + minBlobWeight + " -> " + maxBlobWeight, 10, height - 15, 
+      + minBlobWeight + " -> " + maxBlobWeight, 10, height - 35, 
       450, 20);
+
+    //  minBlobWeight = 35;
+    //  maxBlobWeight = 1210;
+    context.drawGui();
   }
   popStyle();
 }
@@ -668,12 +670,12 @@ void setMiniMode()
 {
   /*
   if (miniMode)
-  {
-    size(200, 40);
-    frame.setSize(200, 80);
-  } else
-  {
-    size(imageWidth+(int)mainOffset.x, imageHeight+(int)mainOffset.y);
-    frame.setSize(width+80, height+80);
-  }*/
+   {
+   size(200, 40);
+   frame.setSize(200, 80);
+   } else
+   {
+   size(imageWidth+(int)mainOffset.x, imageHeight+(int)mainOffset.y);
+   frame.setSize(width+80, height+80);
+   }*/
 }

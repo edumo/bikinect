@@ -8,8 +8,6 @@ void saveConfig()
     config.getChild("grabbers").getChild(i).setInt("y", (int)grabbers[i].y);
   }
 
-
-
   config.getChild("detection").setInt("minDistance", minDistance);
 
   config.getChild("detection").setInt("minBlobSize", minBlobSize);
@@ -103,10 +101,18 @@ void controlEvent(ControlEvent e)
 }
 
 
+void tweakQuickParamAdvance() {
+  if (keyPressed && mousePressed) {
+    context.keyPressed(key);
+  }
+}
+
 void keyPressed(KeyEvent e)
 {
 
   if (criticalStop) return;
+
+  context.keyPressed(key);
 
   switch(key)
   {
@@ -177,30 +183,30 @@ void keyPressed(KeyEvent e)
   case 's':
     saveConfig();
     break;
-  case 'b':
-    maxDiff--;
-    break;
-  case 'B':
-    maxDiff++;
-    break;
+    /* case 'b':
+     maxDiff--;
+     break;
+     case 'B':
+     maxDiff++;
+     break;*/
   case 'n':
     minDiffTouch--;
     break;
   case 'N':
     minDiffTouch++;
     break;
-  case 'v':
-    minDiff--;
-    break;
-  case 'V':
-    minDiff++; 
-    break;
-  case ',':
-    minDiffT--;
-    break;
-  case ';':
-    minDiffT++; 
-    break;
+    /*  case 'v':
+     minDiff--;
+     break;
+     case 'V':
+     minDiff++; 
+     break;
+     case ',':
+     minDiffT--;
+     break;
+     case ';':
+     minDiffT++; 
+     break;*/
   case '.':
     maxDiffT--;
     break;
